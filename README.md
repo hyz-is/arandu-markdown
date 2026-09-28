@@ -4,8 +4,15 @@
 
 # Arandu Markdown
 
-An Arandu package. It registers its own routes, owns its own table, and decides
-for itself who may reach either.
+An Arandu package that renders a Markdown body for a page: HTML that is safe to
+write unescaped, the headings a table of contents lists, the plain text search
+and generative engines read, and the reading time.
+
+It does not parse Markdown. `hesape/str.Markdown` is the collection's renderer —
+CommonMark with GitHub tables, task lists, strikethrough and autolinks — and it
+passes raw HTML through untouched, leaving the sanitizing to its caller. This
+package is that caller: it reads the output back with the HTML5 tokenizer and
+writes it again through a closed allowlist.
 
 ## Install
 
@@ -27,13 +34,16 @@ import (
 )
 ```
 
-The construction, in `Build`, after the session store exists and before
-`k.Register`:
+The construction, in `Build`, before `k.Register`:
 
 ```go
 	markdownModule, err := markdown.New(markdown.Config{
-		Tenant: cfg.Auth.Tenant,
-	}, db, sessions)
+		// The ids the layout already uses, so no heading takes one.
+		Reserved: []string{"content", "comments"},
+		// The origins img-src allows besides 'self' -- the CDN of the
+		// media library, if there is one.
+		ImageOrigins: imageOrigins,
+	})
 	if err != nil {
 		return App{}, err
 	}
@@ -45,148 +55,73 @@ And the registration, inside the `k.Register(...)` call already there:
 		markdownModule,
 ```
 
-Then, once, before the application serves:
+`New` returns an error rather than starting half-wired: a heading level out of
+range, a reserved id no heading could take, or an image origin that is not a
+bare `https://` origin is refused where it is written.
 
-```bash
-aru migrate
-```
+Registering it adds no route, no table and no background loop. It serves no
+route on purpose: a body reaches a page through the controller that authorized
+the entry it belongs to, and a route here would render text for anybody who
+sent some.
 
-This package owns a table, which is why the migration step is not optional and
-why `arandu.mod.toml` says `migrations = true`.
+## Render
 
-## Publish the views
-
-This package carries the markup of its own pages and hands it over instead of
-rendering it from the inside, because a page you cannot edit is a page that says
-the wrong thing in your product.
-
-Look at what would be written, then write it:
-
-```bash
-aru vendor:publish --tag=view
-aru vendor:publish --tag=view --apply
-```
-
-Nothing is written without `--apply`. The preview lists every file as `create`,
-`update`, `unchanged` or `conflict`, and running the command a second time
-writes nothing. A file changed outside its `arandu:begin custom` markers is
-reported as a conflict and left alone; `--force` publishes over one, and even
-then what is inside the markers is carried forward.
-
-The files land under `resources/views/modules/markdown/`, and from that point
-they are yours. Nothing of this package is compiled beside them, so no view name
-is registered twice and no rule has to decide which of two files won — the
-consequence being that a view of this package that changes later does not reach
-a project that already published it.
-
-Two steps are left to you, and they are left to you because a command that
-edited `bootstrap/app.go` behind your back is a command whose output nobody can
-explain. Compile what was written:
-
-```bash
-aru view:build
-```
-
-and import the directory it wrote into, with the other imports:
+The module value is shared: hand it to whatever builds the page.
 
 ```go
-	_ "your/module/path/storage/framework/views/modules/markdown"
+doc := markdownModule.Render(post.Body)
+
+doc.HTML     // template.HTML, written unescaped by the view
+doc.Headings // []Heading{Level, ID, Text}, for the table of contents
+doc.Text     // what the body says, one line per block, for search and llms-full.txt
+doc.Words    // len(strings.Fields(doc.Text))
+doc.Minutes  // reading time at Config.WordsPerMinute, 0 for an empty body
 ```
 
-Without that import the views are not in the binary, and the module refuses to
-boot rather than answering the first request that reaches one of them with a
-500. The refusal names the view, the command and the import.
+`Render` never fails and is a pure function of the source and the
+configuration, so the result may be cached by the source.
+
+## What comes out
+
+| Markdown | HTML |
+| --- | --- |
+| paragraphs, hard breaks, `---` | `p`, `br`, `hr` |
+| `#` to `######` | `h1`–`h6`, never above `Config.TopHeading`, with an `id` at the top level |
+| `**strong**`, `*em*`, `~~del~~`, `` `code` `` | `strong`, `em`, `del`, `code` |
+| fenced and indented code | `pre` and `code class="language-…"` |
+| lists, task lists, quotes, tables | `ul`, `ol start`, `li`, disabled `input type="checkbox"`, `blockquote`, `table` with `align` |
+| links | `a href title` — http(s) with no userinfo, `mailto:` with an address, same-site paths, in-page anchors |
+| images | `img src alt title loading="lazy" decoding="async"` — same-site paths and `Config.ImageOrigins` |
+| an image alone in its paragraph | `figure`, with the image's title as its `figcaption` |
+
+Everything else is shown as the text it was. A pasted `<iframe>` appears on the
+page as `<iframe>`, a refused link keeps its words and a refused image its
+description, so an author reading the preview sees what did not make it instead
+of wondering where it went.
 
 ## Configuration
 
-| field | required | meaning |
+| Field | Default | What it does |
 | --- | --- | --- |
-| `Tenant` | yes | the customer a visitor with no session is read as. From the application's configuration, never from the request. |
-| `Prefix` | no | where the routes are mounted. Defaults to `/markdown`. |
-| `PageSize` | no | how many records one page answers with. Defaults to 25, refused above 200. |
+| `TopHeading` | `2` | The highest level a heading is drawn at. A higher one is lowered to it, never shifted, so `#` and `##` both become sections. The contents list this level and the one below it |
+| `Reserved` | none | Ids the page already uses. A heading that would take one gets `-2` |
+| `ImageOrigins` | none | Bare `https://` origins an image may load from besides the site itself — the same list as the content security policy's `img-src` |
+| `WordsPerMinute` | `200` | The reading speed `Minutes` is measured at |
 
-`New` returns an error rather than starting half-wired, so a setting that
-cannot work fails where it is written instead of on the first request that
-needed it.
+## Cost
 
-## Routes
-
-| method | path | name |
-| --- | --- | --- |
-| `GET` | `/markdown` | `markdown.index` |
-| `GET` | `/markdown/{id}` | `markdown.show` |
-| `POST` | `/markdown` | `markdown.store` |
-
-Every one of them is refused until the policy is opened. That is the state the
-package ships in, and it is deliberate.
-
-## Open the policy
-
-`policy.go` denies every action and has no branch that allows one. Open what
-this package needs, one action at a time, inside the custom block:
-
-```go
-	// arandu:begin custom
-	if a == MarkdownView && (s.ID == record.ID || s.HasRole("admin")) {
-		return nil
-	}
-	// arandu:end custom
-```
-
-What is not written there stays closed, including every action added later.
-
-## Model-first data path
-
-`Markdown` embeds `model.Model[Markdown]`, and `Markdowns(db)` is the one
-configured entry point for its table. `MarkdownService` owns `*data.DB` and
-follows `validate -> security.Authorize -> Grant -> Model terminal`; handlers
-never hold the database or construct a Model.
-
-Create writes `TenantID` from `data.Tenant(g)`. Find authorizes before reading
-and again against the row it found. List authorizes before building its scoped,
-allowlisted query. The Model keeps its default `tenant_id` scope on every
-terminal.
-
-Terminals return `*Markdown` and `[]*Markdown`. Keep those pointers intact:
-copying an embedded Model leaves its `Entity` pointer aimed at the original
-allocation. `Resource` and `Collection` are explicit response snapshots and do
-not expose tenant or Model internals.
-
-There is no CRUD Repository. Add one only for a complex query, read model,
-report, export or raw SQL contract that the common Model path cannot express.
+One linear pass over what `str.Markdown` returns. `str.Markdown` is linear on
+prose and quadratic on a long run of link openers that never close, so a field
+that takes a body from people the application does not trust caps its length,
+as its form validation does anyway.
 
 ## Layout
 
 ```
-module.go      registration, routes, handlers and migrations
-config.go      what the application passes in
-model.go       the entity, and what it may answer with
-policy.go      who may do what
-service.go     the rules and authorized Model access
-views.go       the files the application takes ownership of
+module.go   registration, Document and Heading, and the one entry point
+config.go   what the application passes in
+render.go   the allowlist and the rewrite
 ```
-
-## What is already correct, and has to stay that way
-
-**The policy denies everything.** There is no permit-all branch to delete
-later. The Service calls `security.Authorize` before its first `Markdowns(db)`
-reach, and every Model terminal requires the Grant that call produced.
-
-**Authorization precedes the Model.** The package audit checks that order in
-every exported Service method. A Model terminal enforces tenant scope; the
-preceding Policy call decides whether the action itself is allowed.
-
-**The tenant comes from `data.Tenant(g)`.** Never from the path, the body, the
-query string or a header. The value on the Grant came from the session; a value
-that arrived with the request is a value the caller chose.
-
-**`arandu.mod.toml` declares what the package does** — network, filesystem,
-exec, migrations — and the suite compares the declaration against what the code
-*calls*, not against what it imports: `net/http` is imported by everything with
-a route and says nothing. A package that says it makes no outbound calls and
-then opens one fails its own tests, and that is the only place the comparison
-happens. `aru doctor` audits the application it is run inside and never loads a
-dependency, so nothing audits an installed package except the package itself.
 
 ## Tests
 
@@ -194,9 +129,12 @@ dependency, so nothing audits an installed package except the package itself.
 go test -race ./...
 ```
 
-The denial suite constructs the Service with a nil database, so even building
-`Markdowns(nil)` would panic. The structural twin reads the allowed path and
-rejects any Service method that reaches the Model before `Authorize`.
+`FuzzRenderWritesOnlyTheAllowlist` reads every output back with the same
+tokenizer and fails on any element, attribute or destination the allowlist does
+not write. Its seeds run on every `go test`; `go test -fuzz` searches past them.
+
+`arandu.mod.toml` declares no capability, and `tests/Unit/audit_test.go`
+compares that with what the code calls.
 
 ## Licence
 

@@ -23,23 +23,19 @@ excludes; `testdata/` holds fixtures that are invalid on purpose.
 Four properties are the reason this package is what it is. A change that breaks
 one of them will not be merged, whatever else it improves.
 
-1. **The policy denies by default.** No branch allows every action, and none is
-   added. Opening an action means writing the rule that opens it.
-2. **Every Service method authorizes before reaching the Model.** The Grant is
-   then required by the Model terminal; constructing `Markdowns(db)` first is
-   already the wrong order and the structural audit rejects it.
-3. **The tenant comes from `data.Tenant(g)`.** Not from the path, the body, the
-   query string or a header, on any code path, including the read paths.
+1. **Only the allowlist leaves.** An element or attribute is added to
+   `render.go` only when `hesape/str.Markdown` writes it, and in the same commit
+   as the line in `tests/Unit/render_test.go` that allows it.
+2. **A destination is checked, not trusted.** A new scheme or origin is a new
+   way for a body to reach something, and needs the argument in the pull
+   request.
+3. **Nothing is silently lost.** What the allowlist refuses is shown as text.
 4. **`arandu.mod.toml` matches the code.** Adding an outbound call, a file
-   write or a process means declaring it there in the same commit.
+   read or write, a process or a table means declaring it there in the same
+   commit.
 
-CRUD stays on `Markdowns(db)` and its Builder. Add a Repository only for a
-specialized complex query, read model, report, export or raw SQL contract; a
-wrapper around `Find`, `Get`, `Save` or `Delete` is a second data path.
-
-Model-backed entities stay pointers. Copying `Markdown` also copies an embedded
-Model whose `Entity` still points to the original allocation. Response
-resources are the deliberate snapshot boundary; Service results are not.
+This package does not parse Markdown. A rendering bug belongs to
+`hesape/str.Markdown`, and is fixed there.
 
 ## Style
 

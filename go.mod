@@ -1,13 +1,14 @@
 module github.com/hyz-is/arandu-markdown
 
-go 1.26
+go 1.26.0
 
 require (
-	github.com/arandu-io/framework v0.47.1
-	github.com/arandu-io/hesape v0.41.1
+	github.com/arandu-io/framework v0.49.0
+	github.com/arandu-io/hesape v0.43.0
+	golang.org/x/net v0.59.0
 )
 
 require (
-	golang.org/x/crypto v0.55.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
 )

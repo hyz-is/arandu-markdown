@@ -15,16 +15,15 @@ names the situation you are in rather than the topic it covers.
 
 | skill | when it fires |
 | --- | --- |
-| `markdown-policy` | opening an action, adding an authorized Model-backed use case, or anything answering 403 |
-| `markdown-module` | adding a route, a handler, a config field, a response field or a migration |
+| `markdown-module` | changing what the renderer writes: an element, an attribute, a destination, a heading id, a config field |
 | `markdown-release` | the gates, the manifest, a dependency, a version, a tag |
 | `markdown-vault-notes` | writing the note, the gap or the journal entry, when this checkout sits inside the Arandu Obsidian vault |
 | `markdown-package` | installing and wiring this package **into an application** |
 
 The last one has a different audience from the other three, and that is on
 purpose: it travels with the package so that an assistant working in somebody
-else's project — the one running `go get` — has the wiring, the migration step
-and the closed policy in front of it instead of guessing.
+else's project — the one running `go get` — has the wiring, the content
+security policy and the caching in front of it instead of guessing.
 
 `markdown-vault-notes` fires on a condition rather than on a task: it applies
 only when `MOC-arandu.md`, `plans/cmd/audit-vault/` and `45-modules/` are actually
@@ -34,15 +33,11 @@ package cloned somewhere else never grows a folder tree imitating one.
 ## Why these exist
 
 The audience of the first three is somebody changing the package. The common
-failure modes are a provider, a container lookup, a CRUD Repository beside the
-Model, a tenant read from the URL, or a Policy branch that returns nil for
-administrators "for now". None belongs here, and the last three are security
-failures rather than style disagreements.
-
-The package is built to be checked rather than trusted. Its denial tests use a
-nil database, so reaching even the configured Model before authorization
-panics. The structural twin reads every exported Service method and checks the
-same order on the allowed path. Running `go test -race ./...` exercises both.
+failure modes are a second Markdown parser, a sanitizer library pulled in beside
+the tokenizer, an allowlist entry for something the parser never writes, a
+configuration switch that widens the list, and a refused tag that vanishes
+instead of showing. None belongs here, and the first four are how a sanitizer
+stops being auditable.
 
 ## Adding your own
 

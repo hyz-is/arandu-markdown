@@ -5,17 +5,16 @@
 # calls and then holds an HTTP client is rejected, which is what makes the
 # four lines below worth reading before installing anything.
 
-name = "hyz-is/markdown"
-framework = ">= 0.47"
+name = "hyz-is/arandu-markdown"
+framework = ">= 0.49"
 profiles = ["conventional", "performance"]
 
 [permissions]
-# It answers requests and reads its own rows. Nothing leaves the process.
+# It turns a string into a string. Nothing leaves the process.
 network = false
-# It keeps no state outside the database.
+# It reads no file and writes none; the body arrives as an argument.
 filesystem = false
 # It runs no other program.
 exec = false
-# module.go owns the markdowns table, so whoever installs this has to run
-# `aru migrate`. Declaring it is how they find that out before deploying.
-migrations = true
+# It owns no table: a body is stored by the application that wrote it.
+migrations = false

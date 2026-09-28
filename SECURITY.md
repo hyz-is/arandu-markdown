@@ -10,14 +10,14 @@ release rather than a moved tag.
 
 Report it privately, through GitHub's advisory form:
 
-<https://github.com/hyz-is/markdown/security/advisories/new>
+<https://github.com/hyz-is/arandu-markdown/security/advisories/new>
 
 Do not open a public issue and do not describe the problem in a pull request.
 A report that arrives in public is a report every reader of this repository can
 act on before there is a release to upgrade to.
 
-Include what you need to reproduce it: the version, the wiring, and the request
-or call that triggers it.
+Include what you need to reproduce it: the version, the configuration, and the
+source that triggers it.
 
 Expect an acknowledgement within a few days. If the report is confirmed, the
 fix, the release and the advisory are published together, and you are credited
@@ -25,19 +25,19 @@ unless you ask not to be.
 
 ## What is in scope
 
-Anything that lets a caller reach data a policy did not authorize. In
-particular:
+Anything that lets a body put markup on a page that the allowlist did not write.
+In particular:
 
-- a path from a handler to a Model or database handle that does not pass through
-  the Service and its Policy;
-- a Model terminal reached before `security.Authorize`;
-- a query whose tenant scope is disabled, or a tenant taken from anywhere but
-  `data.Tenant(g)`;
-- a `Grant` that can be produced without a policy returning nil;
-- a field reaching a response that `Resource` does not list.
+- an element or an attribute in `Document.HTML` that `render.go` did not write;
+- a link or image destination with a scheme other than the ones it keeps, or an
+  image from an origin `Config.ImageOrigins` does not name;
+- a way out of an escaped text node or attribute value;
+- a source that makes `Render` fail, or run for time out of proportion to its
+  length.
 
 ## What is not
 
-- A vulnerability in the framework itself. Report that to the framework.
-- A policy that is too permissive in an application that opened it. What this
-  package ships denies everything; what an application opens is its own.
+- A vulnerability in `hesape/str.Markdown` itself that this package's rewrite
+  already neutralizes. Report it to hesape all the same.
+- What an application does with `Document.Text`: it is plain text, and a view
+  that writes it unescaped has chosen to.

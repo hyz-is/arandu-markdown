@@ -55,15 +55,15 @@ inside and never loads a dependency, so the manifest of an installed package is
 opened by nothing but that package's own suite.
 
 ```toml
-name = "hyz-is/markdown"
-framework = ">= 0.47"
+name = "hyz-is/arandu-markdown"
+framework = ">= 0.49"
 profiles = ["conventional", "performance"]
 
 [permissions]
 network = false
 filesystem = false
 exec = false
-migrations = true
+migrations = false
 ```
 
 `TestTheDeclaredCapabilitiesAreWhatTheCodeDoes`, in `tests/Unit/audit_test.go`,
@@ -84,8 +84,8 @@ own code; here both fail the suite, because `go test` has one outcome:
 | `permission-not-used` | warning | the manifest says `true` and nothing does it. Asking for more than you need is how a permission model erodes into everyone declaring everything |
 
 So a dependency or a call added here is a line changed in `arandu.mod.toml` in
-the same commit. `migrations = true` is the one this package already declares,
-and it is what tells an installer to run `aru migrate` before deploying.
+the same commit. This package declares nothing: it turns a string into a string,
+and the day it needs a file, a socket or a table the audit says so first.
 
 The `framework` line is a floor, and it is a second declaration of something
 `go.mod` already says. Move both together when you bump.
@@ -97,7 +97,11 @@ second `require` is a download and an audit surface for every project that
 installs the package, and the framework's own rule is a core with no third-party
 dependency beyond `golang.org/x/crypto`.
 
-What is already here is the framework and the components module it is built on:
+What is already here is the framework, the components module it is built on,
+and `golang.org/x/net` for its HTML5 tokenizer -- the one thing the rewrite
+cannot do without, since reading HTML a person typed with anything less than the
+specification's tokenizer is how a sanitizer and a browser come to disagree
+about where a tag ends:
 
 ```sh
 export GOWORK=off
@@ -128,28 +132,25 @@ build that stops in somebody else's repository, weeks later, when they upgrade,
 with an error about a struct literal they did not write. Say what it was, what
 it is, and what they have to write instead.
 
-Run `apidiff` against the release baseline and enumerate every removal. A move
-from CRUD Repository to Model-first normally removes the Repository type,
-constructor and methods and changes Service constructors/results to database
-and entity pointers. Keeping `ErrNotFound` in `model.go` is not a removal just
-because its source file changed.
+Run `apidiff` against the release baseline and enumerate every removal.
 
 Three changes break an installer without touching a signature, and each one is
 worth a line in the changelog:
 
-- **A route name.** URLs are built from names, so a rename is a 404 in a
-  template somebody else wrote.
-- **A migration name.** Changing what an applied name means leaves the change
-  missing everywhere it already ran, and nothing says so.
-- **A default.** `DefaultPrefix` and `DefaultPageSize` are what an application
-  gets by leaving the field empty, so moving one moves behaviour in every
-  project that never mentioned it.
+- **The allowlist.** An element or an attribute that stops being written is a
+  page that stops looking the way its stylesheet expects, and one that starts
+  being written is markup somebody's content security policy or stylesheet
+  never saw.
+- **A heading id.** Ids are addresses people share; a change to how a slug is
+  made is every shared link to a section landing at the top of the page.
+- **A default.** `DefaultTopHeading` and `DefaultWordsPerMinute` are what an
+  application gets by leaving the field empty, so moving one moves behaviour in
+  every project that never mentioned it.
 
 ## Reporting a vulnerability
 
 Not in an issue and not in a pull request. `SECURITY.md` has the private
-advisory address. Anything that lets a caller reach data a policy did not
-authorize is in scope — a handler that reaches a Model or database directly, a
-Model terminal before `Authorize`, disabled tenant scope, a `Grant` produced
-without a Policy returning nil, or a field reaching a response that `Resource`
-does not list.
+advisory address. Anything that lets a body put markup on a page that the
+allowlist did not write is in scope -- an element, an attribute, a destination
+with a script scheme, or a way out of an escaped text node -- and so is an
+input that makes Render fail or run away with the process.

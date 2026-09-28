@@ -1,230 +1,67 @@
 ---
 name: markdown-module
-description: Change what this Arandu package registers — its routes, handlers, configuration, response shape or schema. Use when the request is to "add a route", "add an endpoint", "add a handler", "add a config option", "change the prefix", "add a field to the response", "add a column", "write a migration", "return the tenant id too", "add a background job to the package", "make it run something at boot", or when a change touches module.go, config.go or model.go. Covers foundation.Module and the five optional interfaces beside it, why handlers are thin, the migration name that carries the order, and what Resource is for.
+description: Change what this Arandu package's renderer writes. Use when the request is to "allow an element", "keep an attribute", "support iframes", "allow images from another host", "add a class to code blocks", "change heading ids", "list h4 in the table of contents", "add a config option", "make it configurable", "the renderer drops my tag", "a link disappeared", or when a change touches render.go, config.go or module.go. Covers the allowlist and why it only follows str.Markdown, destinations, heading ids, the four settings, and why there is no route.
 license: MIT
 ---
 
-# The module contract
+# Changing the renderer
 
-`foundation.Module` is `Name()` and `Routes()`, and nothing else. That pair is
-the whole public contract between a package and the framework: an application
-calls `New`, gets something that satisfies it, and registers it by hand.
+`render.go` reads what `hesape/str.Markdown` returns with the HTML5 tokenizer
+from `golang.org/x/net/html` and writes it again. The allowlist is the
+`elements` map at the top of that file, and the attributes each element keeps
+are written out in `start` — there is no attribute map to widen, on purpose.
 
-```go
-var (
-	_ foundation.Module     = (*Module)(nil)
-	_ foundation.Migratable = (*Module)(nil)
-)
-```
+## Adding an element or an attribute
 
-Those two lines are compile-time proof and they belong at the top of
-`module.go`. Add one for every contract the module takes on, so the failure lands
-here rather than at the registration in somebody else's repository.
-
-## Taking on more than routes
-
-Six interfaces sit beside `Module` in `framework/foundation`, one of which this
-package already implements, and each is opted into the same way — by
-implementing it. Confirm the set for the version in `go.mod` with:
+Only when `str.Markdown` writes it. The list mirrors the parser; something the
+parser never emits can only arrive as raw HTML somebody typed, and raw HTML is
+shown as text. Check first:
 
 ```sh
 export GOWORK=off
-go doc github.com/arandu-io/framework/foundation
+grep -n '<[a-z]' "$(go env GOMODCACHE)/github.com/arandu-io/hesape@$(go list -m -f '{{.Version}}' github.com/arandu-io/hesape)/str/markdown"*.go
 ```
 
-| interface | what it is for |
-| --- | --- |
-| `Bootable` | prepare state once, at boot |
-| `Background` | run a loop of the module's own |
-| `Schedulable` | declare work for the scheduler |
-| `Migratable` | own tables — this package implements it |
-| `Health` | report on the storage it depends on |
-| `Closable` | give resources back at shutdown |
+Then, in one commit:
 
-Two of them change what `arandu.mod.toml` has to say. A `Background` loop that
-calls out needs `network = true`; anything that writes a file needs
-`filesystem = true`. Declare it in the same commit as the code, or
-`TestTheDeclaredCapabilitiesAreWhatTheCodeDoes` fails and names which of the
-four it was. Nothing downstream would have caught it: `aru doctor` reads the
-application's own tree and never opens an installed package.
+1. the entry in `elements`, and the attributes it keeps in `start`, each value
+   validated or rebuilt rather than copied;
+2. the same element and attributes in `allowed`, in `tests/Unit/render_test.go`;
+3. a test showing the element coming out of Markdown and a hostile variant of it
+   coming out as text;
+4. a changelog line — an element that starts being written is markup somebody's
+   stylesheet and content security policy never saw.
 
-## Adding a route
+A request to allow `iframe`, `video`, `script`, `style`, `form`, `object`,
+`embed` or an event attribute is refused: none of them is Markdown, and each is
+a way to run or load something the page did not choose.
 
-**1. Register it in `Routes`, with a name.**
+## Destinations
 
-```go
-	r.Action(stdhttp.MethodDelete, m.cfg.Prefix+"/{id}", m.destroy).Name("markdown.destroy")
-```
+`href` and `src` are the two ways a body reaches something outside itself.
+`(*Module).href` keeps http(s) with a host and no userinfo, `mailto:` with an
+address, same-site paths with no `..` segment, and `#` anchors shaped like the
+ids headings get. `(*Module).src` keeps same-site paths and https URLs on an
+origin `Config.ImageOrigins` names. A new scheme needs the argument in the pull
+request; a new origin belongs in the installer's configuration, not here.
 
-The name is what a URL is built from. Two spellings of one address disagree, and
-the failure when they do is a link to a 404. The prefix is `m.cfg.Prefix` and
-never a literal: the application decides where the package is mounted, and
-`TestTheModuleRegistersItsRoutesUnderItsPrefix` at
-`tests/Feature/routes_test.go:94` mounts it at `/widgets` and fails if any route
-came out anywhere else. It also asserts every route is tagged with the module
-name, which is what `aru route:list` groups by.
+## Heading ids
 
-**2. Write the handler thin.** Read the input, ask the service, answer:
+`str.Slug(text, "-")`, cut at a word past 80 characters, `section` when nothing
+is left, and `-2`, `-3` when taken or reserved. Changing how an id is made
+changes addresses people have shared: it is a changelog line, and a minor
+version while the major is 0.
 
-```go
-func (m *Module) destroy(ctx *fhttp.Context) error {
-	if err := m.svc.Delete(ctx.Ctx(), m.subject(ctx.Request), ctx.Param("id")); err != nil {
-		return m.answer(ctx, err)
-	}
-	return ctx.Status(stdhttp.StatusNoContent)
-}
-```
+## Configuration
 
-`ctx.Status` and not `ctx.JSON` for an empty answer: `JSON` calls `ToArray()` on
-what it is handed, so a nil resource panics inside the framework rather than
-answering 204.
+`Config` has four fields, validated by `New` and defaulted by `withDefaults`
+after validation, never before. A new field is a new thing every installer has
+to understand, and a switch that widens the allowlist is refused: a list each
+installer can widen is a list nobody can audit.
 
-No rule and no Model construction lives in a handler. A handler that held the
-database or called `Markdowns` would bypass the only place the Policy is
-guaranteed to run. Read `markdown-policy` before writing the Service method.
+## No route, no table
 
-**3. Let `answer` translate the refusal.** It knows three: `security.ErrForbidden`
-becomes 403, `ErrNotFound` becomes 404, and a `validation.Errors` becomes 422
-with the rejected field names, which are the client's own and give nothing away.
-Anything else is *returned*, not swallowed — the framework turns it into the
-error page in development and a 500 in production, which is the honest outcome.
-Answering 200 with an empty body is the failure nobody debugs.
-
-**4. Add the case to the route test.** `TestAVisitorWithNoSessionReachesNothing`
-at `tests/Feature/routes_test.go:59` is a table of every route, and it asserts
-403 for each. It runs against `data.Wrap(nil, data.DialectSQLite)` — a handle
-over no database — so a route that got past the policy panics rather than
-passes.
-
-## Where the subject comes from
-
-`m.subject(r)` loads the session and returns `security.Guest(m.cfg.Tenant)` when
-there is none. Nothing else reads who is acting, and no handler takes a user id
-from the request.
-
-The guest's tenant is the one place in this package where a tenant does not come
-from a Grant, and it is because there is no Grant yet. It comes from
-`Config.Tenant`, which is the application's own configuration — never from the
-request.
-
-## Changing the Model
-
-`Markdown` embeds `model.Model[Markdown]`, and `Markdowns(db)` is the one
-configured entry point for the table. Keep the application-generated key
-settings and tenant default visible there:
-
-```go
-func Markdowns(db *data.DB) *model.Model[Markdown] {
-	m := model.NewModel[Markdown]("markdowns", db, db.GetQueryGrammar(), db.GetPostProcessor())
-	m.KeyType = "string"
-	m.Incrementing = false
-	return m
-}
-```
-
-Do not set `TenantColumn` to `""`: this package owns tenant data. Model
-terminals require a Grant and apply `tenant_id`; the Service still calls
-`security.Authorize` first because the Model does not decide which Policy
-action the Grant represents.
-
-Keep rows as pointers after `NewInstance`, `First`, `Find`, or `Get`. The
-embedded Model's `Entity` points into that allocation, so copying the row and
-then calling a promoted terminal would act on the original.
-
-This table declares `created_at` but not `updated_at`. The Hesape Model stamps a
-timestamp only when the entity declares its column, so creation remains correct
-without changing the published migration or disabling timestamps globally.
-
-## Adding a configuration field
-
-`Config` is a typed struct, and that is the point: a misspelled key in a map is
-a setting that silently keeps its default, and here a field that does not exist
-does not compile.
-
-Three things move together for every new field.
-
-- **A doc comment on the field**, saying what it means and where it may come
-  from.
-- **A rule in `Validate`** if there is a value it cannot be. `New` calls
-  `Validate` before anything else, so a setting that cannot work fails where it
-  is wired rather than on the first request that needed it.
-- **A default in `withDefaults`**, as a named constant beside `DefaultPrefix`
-  and `DefaultPageSize`, if zero is meant to mean something. `withDefaults` runs
-  *after* `Validate` and never before: filling a default in first hides the
-  value somebody actually wrote from the check that would have refused it.
-
-A value out of range is refused rather than clamped. A number somebody wrote and
-did not get is worse than a number somebody wrote and was told about — that is
-why `PageSize` above `MaxPageSize` is an error and not a silent 200.
-
-Add the case to `TestTheConfigurationRefusesWhatCannotWork` at
-`tests/Unit/policy_test.go:192`, which is a map of named bad configurations, and
-to `TestNewRefusesAWiringThatCannotWork` at `tests/Feature/routes_test.go:119`
-if the field can make `New` fail.
-
-## What may leave in a response
-
-`Resource` and `Collection` in `model.go` are declared snapshots, not direct
-encoding of the entity. This also defines the safe copy boundary: Model-backed
-Service results stay as `*Markdown`/`[]*Markdown`, because copying an embedded
-Model preserves a back-pointer to the original allocation. A response snapshot
-reads only the explicit fields and cannot be saved.
-
-An encoder handed the entity would answer with whatever fields it happens to
-have, including the embedded Model and anything added later without opening the
-handler. `TenantID` names another customer's identifier and belongs in no
-response.
-
-So a new column that should be visible is added in two places: the struct in
-`model.go`, and the map `ToArray` returns. A column that should not be visible
-is added in one.
-
-`With()` is what goes *beside* the fields at the top level. `ctx.JSON` puts what
-`ToArray` returns under a fixed `"data"` key and merges what `With` returns next
-to it, so `Collection` answers `{"data": {"items": [...]}, "next_cursor": "..."}`.
-The cursor describes the answer rather than the things answered with. A resource
-with nothing to add returns nil.
-
-The cursor is only offered for a full page:
-
-```go
-	if len(records) == m.cfg.PageSize {
-		cursor = records[len(records)-1].ID
-	}
-```
-
-A short page is the last one, and offering a cursor for it offers a next page
-that comes back empty.
-
-## Adding a migration
-
-Append it to the slice `Migrations()` returns, and give it a name that sorts
-after the last one:
-
-```go
-func (createMarkdowns) GetName() string { return "20260823_0001_create_markdowns" }
-```
-
-**The name carries the order and nothing else does.** `TestTheModuleDeclaresItsSchema`
-at `tests/Feature/routes_test.go:140` requires the returned names to be sorted,
-requires none to be empty, and requires every one to satisfy
-`migrations.ReversibleMigration` — the migrator finds `Down` by type assertion,
-so a `Down` with the wrong signature is a rollback that silently does nothing.
-
-Three rules the existing migration keeps:
-
-- **A name is fixed once the package is published.** Changing what an applied
-  name means leaves the change missing everywhere it already ran, and nothing
-  says so.
-- **Types that spell the same in SQLite, PostgreSQL and MySQL.** Identifier
-  columns are `VARCHAR(255)` rather than `TEXT` because they take part in a key
-  and MySQL refuses `TEXT` in one without a prefix length. Timestamps get no
-  database default: the value comes from Go, for the same reason ids do —
-  `gen_random_uuid`, `UUID()` and `randomblob` are three spellings of one idea.
-- **An index that matches the `ORDER BY` of the listing, tenant first.** Without
-  it every page is a scan of every customer's rows.
-
-Migrations do not run at boot. `aru migrate` is a step in the installer's
-pipeline, and every migration has to be compatible with the previous binary
-during a rollout: a new column is nullable or has a default, and removing one
-takes two releases.
+`Routes` registers nothing. A body reaches a page through the controller that
+authorized its entry; a preview endpoint here would render text for anybody,
+with no entry and no Grant behind it. A route or a table would also change
+`arandu.mod.toml`, and the audit suite says so.
