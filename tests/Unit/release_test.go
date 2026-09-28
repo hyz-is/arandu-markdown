@@ -28,7 +28,7 @@ func TestTheManifestFrameworkFloorMatchesGoMod(t *testing.T) {
 func TestTheReleaseSkillUsesTheManifestFrameworkFloor(t *testing.T) {
 	root := packageRoot(t)
 	manifest := readReleaseFile(t, root, "arandu.mod.toml")
-	skill := readReleaseFile(t, root, ".agents/skills/skeleton-release/SKILL.md")
+	skill := readReleaseFile(t, root, ".agents/skills/markdown-release/SKILL.md")
 	declared := captureReleaseValue(t, manifest,
 		`(?m)^framework = ">= ([0-9]+\.[0-9]+)"$`,
 		"Framework floor in arandu.mod.toml")
@@ -155,47 +155,6 @@ const (
 	openMarker = markerHalf + "-start"
 	shutMarker = markerHalf + "-end"
 )
-
-// configure:template-start
-
-// TestTheReleaseHistoryBelongsToTheTemplateSection keeps this repository's own
-// releases out of every package cloned from it.
-//
-// configure renames the template's values into the two release files and does
-// not otherwise know what they mean, so a release entry written outside the
-// section markers travels into the clone with the entity renamed into it. Two
-// published packages carried this repository's history that way, each shipping
-// a changelog whose highest heading described a release of the skeleton and
-// filing everything they had actually added as unreleased.
-//
-// The test is itself inside the section, because a configured package has no
-// template history to keep anywhere.
-func TestTheReleaseHistoryBelongsToTheTemplateSection(t *testing.T) {
-	root := packageRoot(t)
-	for _, file := range []struct {
-		name    string
-		heading *regexp.Regexp
-	}{
-		{"CHANGELOG.md", regexp.MustCompile(`(?m)^## \[[0-9]+\.[0-9]+\.[0-9]+\] - `)},
-		{"UPGRADE.md", regexp.MustCompile(`(?m)^## v[0-9]+\.[0-9]+\.[0-9]+$`)},
-	} {
-		body := readReleaseFile(t, root, file.name)
-		start := strings.Index(body, openMarker)
-		end := strings.Index(body, shutMarker)
-		if start < 0 || end < start {
-			t.Errorf("%s has no template section around its release history", file.name)
-			continue
-		}
-		for _, at := range file.heading.FindAllStringIndex(body, -1) {
-			if at[0] < start || at[0] > end {
-				t.Errorf("%s has a release heading outside the template section: %q",
-					file.name, strings.TrimSpace(body[at[0]:at[1]]))
-			}
-		}
-	}
-}
-
-// configure:template-end
 
 func TestCIGuardsIncompatibleAPIChanges(t *testing.T) {
 	ci := readReleaseFile(t, packageRoot(t), ".github/workflows/ci.yml")
