@@ -10,6 +10,20 @@ a release is corrected by another release and never by moving a tag.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-28
+
+### Changed
+
+- `Document.HTML` is a method, `Document.HTML()`, instead of a field. A Kyse
+  view writes it as `{!! .Body.HTML() !!}`, the call shape `aru doctor` accepts
+  for raw output; a field there read as a value and drew a warning in every
+  application that installed the module.
+
+### Fixed
+
+- The release workflow no longer vets `configure.go`, which a configured copy
+  does not have.
+
 ## [0.1.0] - 2026-09-28
 
 ### Added

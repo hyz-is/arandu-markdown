@@ -71,7 +71,7 @@ The module value is shared: hand it to whatever builds the page.
 ```go
 doc := markdownModule.Render(post.Body)
 
-doc.HTML     // template.HTML, written unescaped by the view
+doc.HTML()   // template.HTML, written unescaped by the view: {!! .Body.HTML() !!}
 doc.Headings // []Heading{Level, ID, Text}, for the table of contents
 doc.Text     // what the body says, one line per block, for search and llms-full.txt
 doc.Words    // len(strings.Fields(doc.Text))

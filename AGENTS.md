@@ -93,7 +93,7 @@ A change that breaks one of them is not merged, whatever else it improves.
 `tests/Unit/render_test.go` holds all four against the code.
 
 1. **Only the allowlist leaves.** Every element and attribute in
-   `Document.HTML` is one `render.go` wrote itself; text is escaped.
+   `Document.HTML()` is one `render.go` wrote itself; text is escaped.
    `FuzzRenderWritesOnlyTheAllowlist` reads the output back with the same
    tokenizer and fails on anything else — its seeds run on every `go test`.
 2. **A destination is checked, not trusted.** Links keep http(s) with no

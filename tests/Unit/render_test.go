@@ -65,17 +65,17 @@ func markupOf(out string) []html.Token {
 // write, and for any destination that is not one a body may point at.
 func onlyAllowlisted(t testing.TB, src string, doc markdown.Document) {
 	t.Helper()
-	for _, tag := range markupOf(string(doc.HTML)) {
+	for _, tag := range markupOf(string(doc.HTML())) {
 		if tag.Type == html.CommentToken || tag.Type == html.DoctypeToken {
 			t.Fatalf("source %q wrote a %v into the page", src, tag.Type)
 		}
 		attrs, ok := allowed[tag.Data]
 		if !ok {
-			t.Fatalf("source %q wrote <%s>, which is not on the allowlist:\n%s", src, tag.Data, doc.HTML)
+			t.Fatalf("source %q wrote <%s>, which is not on the allowlist:\n%s", src, tag.Data, doc.HTML())
 		}
 		for _, a := range tag.Attr {
 			if !attrs[a.Key] {
-				t.Fatalf("source %q wrote %s on <%s>:\n%s", src, a.Key, tag.Data, doc.HTML)
+				t.Fatalf("source %q wrote %s on <%s>:\n%s", src, a.Key, tag.Data, doc.HTML())
 			}
 			if a.Key == "href" || a.Key == "src" {
 				lower := strings.ToLower(strings.TrimSpace(a.Val))
@@ -109,8 +109,8 @@ func TestRawHTMLIsShownAsTheTextItWas(t *testing.T) {
 	}
 
 	doc := render(t, "<div onclick=\"steal()\">hello</div>")
-	if !strings.Contains(string(doc.HTML), "&lt;div onclick=&#34;steal()&#34;&gt;hello&lt;/div&gt;") {
-		t.Fatalf("a div was not shown as its own text: %s", doc.HTML)
+	if !strings.Contains(string(doc.HTML()), "&lt;div onclick=&#34;steal()&#34;&gt;hello&lt;/div&gt;") {
+		t.Fatalf("a div was not shown as its own text: %s", doc.HTML())
 	}
 }
 
@@ -145,12 +145,12 @@ func TestLinksKeepOnlyDestinationsABodyMayPointAt(t *testing.T) {
 		src := "[words](<" + c.dest + ">)"
 		doc := render(t, src)
 		onlyAllowlisted(t, src, doc)
-		linked := strings.Contains(string(doc.HTML), "<a ")
+		linked := strings.Contains(string(doc.HTML()), "<a ")
 		if linked != c.kept {
-			t.Errorf("%q: linked = %v, want %v\n%s", c.dest, linked, c.kept, doc.HTML)
+			t.Errorf("%q: linked = %v, want %v\n%s", c.dest, linked, c.kept, doc.HTML())
 		}
-		if !strings.Contains(string(doc.HTML), "words") {
-			t.Errorf("%q: the link's words were lost: %s", c.dest, doc.HTML)
+		if !strings.Contains(string(doc.HTML()), "words") {
+			t.Errorf("%q: the link's words were lost: %s", c.dest, doc.HTML())
 		}
 	}
 }
@@ -159,11 +159,11 @@ func TestALinkInsideALinkKeepsItsWordsAndNotItsLink(t *testing.T) {
 	t.Parallel()
 
 	doc := render(t, "[outer [inner](/in) text](/out)")
-	if got := strings.Count(string(doc.HTML), "<a "); got != 1 {
-		t.Fatalf("links = %d, want 1: %s", got, doc.HTML)
+	if got := strings.Count(string(doc.HTML()), "<a "); got != 1 {
+		t.Fatalf("links = %d, want 1: %s", got, doc.HTML())
 	}
-	if !strings.Contains(string(doc.HTML), "inner") {
-		t.Fatalf("the inner link's words were lost: %s", doc.HTML)
+	if !strings.Contains(string(doc.HTML()), "inner") {
+		t.Fatalf("the inner link's words were lost: %s", doc.HTML())
 	}
 }
 
@@ -188,18 +188,18 @@ func TestImagesLoadOnlyFromThisSiteAndTheNamedOrigins(t *testing.T) {
 		src := "Look: ![a cover](" + c.src + ") here."
 		doc := render(t, src)
 		onlyAllowlisted(t, src, doc)
-		if kept := strings.Contains(string(doc.HTML), "<img "); kept != c.kept {
-			t.Errorf("%q: kept = %v, want %v\n%s", c.src, kept, c.kept, doc.HTML)
+		if kept := strings.Contains(string(doc.HTML()), "<img "); kept != c.kept {
+			t.Errorf("%q: kept = %v, want %v\n%s", c.src, kept, c.kept, doc.HTML())
 		}
-		if !strings.Contains(string(doc.HTML), "a cover") {
-			t.Errorf("%q: the description was lost: %s", c.src, doc.HTML)
+		if !strings.Contains(string(doc.HTML()), "a cover") {
+			t.Errorf("%q: the description was lost: %s", c.src, doc.HTML())
 		}
 	}
 
 	doc := render(t, "![a cover](/media/cover.png)")
 	for _, want := range []string{`loading="lazy"`, `decoding="async"`} {
-		if !strings.Contains(string(doc.HTML), want) {
-			t.Errorf("an image is written without %s: %s", want, doc.HTML)
+		if !strings.Contains(string(doc.HTML()), want) {
+			t.Errorf("an image is written without %s: %s", want, doc.HTML())
 		}
 	}
 }
@@ -209,17 +209,17 @@ func TestAParagraphHoldingOnlyAnImageIsAFigure(t *testing.T) {
 
 	doc := render(t, "![The panel](/media/panel.png \"The panel, in May\")")
 	want := `<figure><img src="/media/panel.png" alt="The panel" loading="lazy" decoding="async"><figcaption>The panel, in May</figcaption></figure>`
-	if !strings.Contains(string(doc.HTML), want) {
-		t.Fatalf("got %s\nwant %s", doc.HTML, want)
+	if !strings.Contains(string(doc.HTML()), want) {
+		t.Fatalf("got %s\nwant %s", doc.HTML(), want)
 	}
 
 	inline := render(t, "Before ![icon](/media/icon.png) after.")
-	if strings.Contains(string(inline.HTML), "<figure>") {
-		t.Fatalf("an image inside a sentence became a figure: %s", inline.HTML)
+	if strings.Contains(string(inline.HTML()), "<figure>") {
+		t.Fatalf("an image inside a sentence became a figure: %s", inline.HTML())
 	}
 	two := render(t, "![a](/media/a.png) ![b](/media/b.png)")
-	if strings.Contains(string(two.HTML), "<figure>") {
-		t.Fatalf("two images became one figure: %s", two.HTML)
+	if strings.Contains(string(two.HTML()), "<figure>") {
+		t.Fatalf("two images became one figure: %s", two.HTML())
 	}
 }
 
@@ -256,12 +256,12 @@ func TestHeadingsCarryUniqueAddressesAndTheTopTwoLevelsAreListed(t *testing.T) {
 		`<h4 id="too-deep-for-the-contents">`,
 		`<h2>A heading in a quote</h2>`,
 	} {
-		if !strings.Contains(string(doc.HTML), want) {
-			t.Errorf("missing %s in\n%s", want, doc.HTML)
+		if !strings.Contains(string(doc.HTML()), want) {
+			t.Errorf("missing %s in\n%s", want, doc.HTML())
 		}
 	}
-	if strings.Contains(string(doc.HTML), "<h2></h2>") || strings.Contains(string(doc.HTML), `id="section"`) {
-		t.Errorf("an empty heading was written: %s", doc.HTML)
+	if strings.Contains(string(doc.HTML()), "<h2></h2>") || strings.Contains(string(doc.HTML()), `id="section"`) {
+		t.Errorf("an empty heading was written: %s", doc.HTML())
 	}
 }
 
@@ -274,8 +274,8 @@ func TestTopHeadingLowersAndNeverShifts(t *testing.T) {
 	}
 	doc := m.Render("# One\n\n## Two\n\n### Three\n\n#### Four")
 	for _, want := range []string{`<h3 id="one">`, `<h3 id="two">`, `<h3 id="three">`, `<h4 id="four">`} {
-		if !strings.Contains(string(doc.HTML), want) {
-			t.Errorf("missing %s in\n%s", want, doc.HTML)
+		if !strings.Contains(string(doc.HTML()), want) {
+			t.Errorf("missing %s in\n%s", want, doc.HTML())
 		}
 	}
 	if len(doc.Headings) != 4 {
@@ -302,7 +302,7 @@ func TestTextIsWhatTheBodySaysOneLinePerBlock(t *testing.T) {
 	if long.Minutes != 3 {
 		t.Errorf("401 words at 200 a minute = %d minutes, want 3", long.Minutes)
 	}
-	if empty := render(t, " \n\n "); empty.Minutes != 0 || empty.Words != 0 || empty.HTML != "" {
+	if empty := render(t, " \n\n "); empty.Minutes != 0 || empty.Words != 0 || empty.HTML() != "" {
 		t.Errorf("an empty body = %+v, want nothing", empty)
 	}
 }
@@ -312,8 +312,8 @@ func TestCodeKeepsItsLanguageAndEscapesItsContents(t *testing.T) {
 
 	doc := render(t, "```html\n<script>alert(1)</script>\n```\n\n```bad language\nx\n```")
 	onlyAllowlisted(t, "code", doc)
-	if !strings.Contains(string(doc.HTML), `<code class="language-html">&lt;script&gt;alert(1)&lt;/script&gt;`) {
-		t.Fatalf("code was not kept as text: %s", doc.HTML)
+	if !strings.Contains(string(doc.HTML()), `<code class="language-html">&lt;script&gt;alert(1)&lt;/script&gt;`) {
+		t.Fatalf("code was not kept as text: %s", doc.HTML())
 	}
 }
 
@@ -322,11 +322,11 @@ func TestATaskListBoxIsAlwaysDisabled(t *testing.T) {
 
 	doc := render(t, "- [ ] open\n- [x] done\n\n<input type=\"checkbox\" name=\"x\"><input type=\"text\">")
 	onlyAllowlisted(t, "tasks", doc)
-	if got := strings.Count(string(doc.HTML), `<input type="checkbox" disabled`); got != 3 {
-		t.Fatalf("disabled boxes = %d, want 3: %s", got, doc.HTML)
+	if got := strings.Count(string(doc.HTML()), `<input type="checkbox" disabled`); got != 3 {
+		t.Fatalf("disabled boxes = %d, want 3: %s", got, doc.HTML())
 	}
-	if !strings.Contains(string(doc.HTML), `&lt;input type=&#34;text&#34;&gt;`) {
-		t.Fatalf("a text input was not shown as text: %s", doc.HTML)
+	if !strings.Contains(string(doc.HTML()), `&lt;input type=&#34;text&#34;&gt;`) {
+		t.Fatalf("a text input was not shown as text: %s", doc.HTML())
 	}
 }
 
@@ -334,8 +334,8 @@ func TestAnUnclosedSpanDoesNotSwallowTheBlocksAfterIt(t *testing.T) {
 	t.Parallel()
 
 	doc := render(t, "<em>never closed\n\n## A section\n\nA paragraph.")
-	if !strings.Contains(string(doc.HTML), `<h2 id="a-section">`) {
-		t.Fatalf("the heading after an unclosed span lost its address: %s", doc.HTML)
+	if !strings.Contains(string(doc.HTML()), `<h2 id="a-section">`) {
+		t.Fatalf("the heading after an unclosed span lost its address: %s", doc.HTML())
 	}
 	if len(doc.Headings) != 1 {
 		t.Fatalf("headings = %+v, want the section", doc.Headings)
@@ -347,8 +347,8 @@ func TestControlCharactersAreDropped(t *testing.T) {
 
 	doc := render(t, "[x](java\x00script:alert(1)) a\x01b\x7f")
 	onlyAllowlisted(t, "controls", doc)
-	if strings.ContainsAny(string(doc.HTML)+doc.Text, "\x00\x01\x7f") {
-		t.Fatalf("a control character reached the page: %q", doc.HTML)
+	if strings.ContainsAny(string(doc.HTML())+doc.Text, "\x00\x01\x7f") {
+		t.Fatalf("a control character reached the page: %q", doc.HTML())
 	}
 }
 
@@ -385,8 +385,8 @@ func TestOneModuleRendersForManyRequestsAtOnce(t *testing.T) {
 	var wg sync.WaitGroup
 	for range 16 {
 		wg.Go(func() {
-			if got := m.Render("## Same\n\nbody"); got.HTML != want.HTML || got.Headings[0] != want.Headings[0] {
-				t.Errorf("a concurrent render differed: %s", got.HTML)
+			if got := m.Render("## Same\n\nbody"); got.HTML() != want.HTML() || got.Headings[0] != want.Headings[0] {
+				t.Errorf("a concurrent render differed: %s", got.HTML())
 			}
 		})
 	}

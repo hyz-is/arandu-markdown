@@ -108,7 +108,7 @@ func (m *Module) Render(src string) Document {
 		minutes = (words + m.cfg.WordsPerMinute - 1) / m.cfg.WordsPerMinute
 	}
 	return Document{
-		HTML:     template.HTML(w.root.String()),
+		html:     template.HTML(w.root.String()),
 		Headings: w.headings,
 		Text:     text,
 		Words:    words,

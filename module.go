@@ -82,9 +82,8 @@ func (m *Module) Routes(*fhttp.Router) {}
 
 // Document is a rendered body.
 type Document struct {
-	// HTML is the body as markup. Every element and attribute in it is one the
-	// allowlist wrote, so a view writes it unescaped.
-	HTML template.HTML
+	// html is the body as markup; HTML is how a view reaches it.
+	html template.HTML
 	// Headings are the top two levels of the body's own headings, in order,
 	// for a table of contents. A heading inside a quote or a list is part of
 	// that block, not a section of the page, and is not listed.
@@ -99,6 +98,16 @@ type Document struct {
 	// least one for a body with any words, and zero for one without.
 	Minutes int
 }
+
+// HTML is the body as markup. Every element and attribute in it is one the
+// allowlist wrote, and every character of text in it was escaped, so a view
+// writes it unescaped: {!! .Body.HTML() !!} in Kyse.
+//
+// It is a method and not a field because that is the shape a view's raw
+// output is entitled to. `aru doctor` accepts {!! !!} around a call -- markup
+// something produced by escaping -- and warns on a value, which is what a
+// field reads as; the renderer is the thing that escaped this one.
+func (d Document) HTML() template.HTML { return d.html }
 
 // Heading is one entry of a table of contents.
 type Heading struct {

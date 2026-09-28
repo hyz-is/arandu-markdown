@@ -56,7 +56,7 @@ doc := markdownModule.Render(source)
 
 | Field | Use |
 | --- | --- |
-| `HTML` | the view writes it unescaped: `{!! .Body.HTML !!}` in Kyse |
+| `HTML()` | the view writes it unescaped: `{!! .Body.HTML() !!}` in Kyse. A method, so `aru doctor` reads it as markup something escaped |
 | `Headings` | the table of contents: `<a href="#{{ h.ID }}">{{ h.Text }}</a>` |
 | `Text` | search, meta descriptions, `llms-full.txt`, JSON-LD `articleBody`. Plain text: escape it like any string |
 | `Words`, `Minutes` | reading time, `timeRequired` as `PT{{Minutes}}M` |
