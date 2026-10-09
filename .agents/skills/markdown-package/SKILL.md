@@ -2,6 +2,8 @@
 name: markdown-package
 description: Install, wire and use the Arandu Markdown package (Go, Arandu) in an application. Use when the request is to "install arandu-markdown", "render Markdown", "render a blog post", "sanitize Markdown", "table of contents from headings", "reading time", "plain text for llms.txt", "go get github.com/hyz-is/arandu-markdown", "wire it into bootstrap/app.go", "images from the CDN do not show in posts", "my iframe shows as text", "a heading id changed to -2", or when a project's go.mod already requires github.com/hyz-is/arandu-markdown. Covers the wiring and where it goes, the four Config fields, the content security policy's img-src, caching, and what each Document field is for.
 license: MIT
+metadata:
+  audience: app
 ---
 
 # Using Arandu Markdown
