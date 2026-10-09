@@ -56,7 +56,7 @@ opened by nothing but that package's own suite.
 
 ```toml
 name = "hyz-is/arandu-markdown"
-framework = ">= 0.49"
+framework = ">= 0.50"
 profiles = ["conventional", "performance"]
 
 [permissions]
