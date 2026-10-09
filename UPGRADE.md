@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## v0.2.3
+
+Nothing to change in code that calls this package. The release raises its
+floors, so `go get github.com/hyz-is/arandu-markdown@v0.2.3` brings `framework`
+v0.55.1 and `hesape` v0.52.0 into an application that required less. One on an
+older `framework` follows the framework's upgrade guide from its version up to
+v0.55.0 first: the session is configured by `bootstrap.Session`, and an unread
+`SESSION_*` setting or a malformed boolean stops the boot. One that calls
+`hesape` directly follows its guide for v0.52.0, which removes the names it had
+deprecated.
+
 ## v0.2.2
 
 Nothing to change in code that calls this package. The release raises its

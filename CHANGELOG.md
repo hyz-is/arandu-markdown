@@ -10,6 +10,16 @@ a release is corrected by another release and never by moving a tag.
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-09
+
+### Changed
+
+- Requires `framework` v0.55.1, `hesape` v0.52.0 and `golang.org/x/net`
+  v0.60.0, up from v0.50.0, v0.50.3 and v0.59.0, and `arandu.mod.toml`
+  declares `framework = ">= 0.55"`. The `x/net` release fixes six advisories
+  the code did not reach. Nothing here calls a symbol `hesape` v0.52.0 removed
+  or deprecated.
+
 ## [0.2.2] - 2026-10-09
 
 ### Changed
