@@ -60,10 +60,13 @@ var (
 // not on the allowlist is still text. What comes back is the same for the same
 // source and configuration, so a caller may cache it by the source.
 //
-// The cost is str.Markdown's plus one linear pass. str.Markdown is linear on
-// ordinary prose and quadratic on a run of link openers that never close, so a
-// field that takes a body from people the application does not trust caps its
-// length, as a form field does anyway.
+// The cost is str.Markdown's plus one linear pass, and str.Markdown is linear
+// in the length of the source on hostile input too: on a run of openers that
+// never close, and on quotes and lists nested to the hundred levels it allows,
+// whose lines it holds once rather than copying them at every level. Linear is
+// not cheap on every shape -- a line under a hundred nested lists is read again
+// at each of them -- so a field that takes a body from people the application
+// does not trust still caps its length, as a form field does anyway.
 func (m *Module) Render(src string) Document {
 	// Control characters other than the line breaks and the tab are dropped
 	// before anything reads them: they have no place in a body, and a browser

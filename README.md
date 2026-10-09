@@ -110,10 +110,13 @@ of wondering where it went.
 
 ## Cost
 
-One linear pass over what `str.Markdown` returns. `str.Markdown` is linear on
-prose and quadratic on a long run of link openers that never close, so a field
-that takes a body from people the application does not trust caps its length,
-as its form validation does anyway.
+One linear pass over what `str.Markdown` returns, and `str.Markdown` is linear
+in the length of the source on hostile input too: on a run of openers that never
+close, and on quotes and lists nested to the hundred levels it allows, whose
+lines it holds once rather than copying them at every level. Linear is not cheap
+on every shape, since a line under a hundred nested lists is read again at each
+of them, so a field that takes a body from people the application does not
+trust still caps its length, as its form validation does anyway.
 
 ## Layout
 
