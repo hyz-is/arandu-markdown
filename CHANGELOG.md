@@ -10,6 +10,27 @@ a release is corrected by another release and never by moving a tag.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-09
+
+### Changed
+
+- Requires `hesape` v0.50.3 and `framework` v0.50.0, up from v0.43.1 and
+  v0.49.0, and `arandu.mod.toml` declares `framework = ">= 0.50"`. v0.50.0 is the
+  lowest framework release that builds against that `hesape`.
+
+### Fixed
+
+- A body that nests quotes or lists and continues their paragraph with lazy
+  lines no longer makes `Render` allocate hundreds of bytes for each byte of
+  it. A paragraph under a hundred nested quotes took about 580, 23 MB for 40 KB
+  of text, and takes 36 now, this package's own rewrite included: the
+  `str.Markdown` it requires holds the lines of a nested level once instead of
+  copying them at every level. `TestAHostileNestedBodyIsHeldOnce` fails above
+  100.
+- The `Render` doc comment and the README no longer call `str.Markdown`
+  quadratic on a run of link openers that never close. It is linear there, and
+  they still advise capping the length of a body nobody vetted.
+
 ## [0.2.1] - 2026-10-09
 
 ### Added

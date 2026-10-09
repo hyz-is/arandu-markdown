@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.2.2
+
+Nothing to change in code that calls this package. The release raises its
+floors, so `go get github.com/hyz-is/arandu-markdown@v0.2.2` brings `framework`
+v0.50.0 and `hesape` v0.50.3 into an application that required less. One still
+on `framework` v0.49 follows the framework's upgrade guide for v0.50.0 first:
+`middleware.KeyBySession` takes the session store, and `CSRFProtect` issues a
+guest's CSRF token.
+
 ## v0.2.1
 
 Nothing to change in an application: this release touches skills, not Go code.
