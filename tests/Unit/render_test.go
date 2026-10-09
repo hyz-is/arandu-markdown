@@ -1,6 +1,7 @@
 package unit_test
 
 import (
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -431,4 +432,89 @@ func TestABodyTheParserCannotReadIsShownAsItsText(t *testing.T) {
 	if !strings.Contains(doc.Text, "[](\\") || !strings.Contains(doc.Text, "Before.") {
 		t.Fatalf("Text = %q, want the source's words", doc.Text)
 	}
+}
+
+// TestAHostileNestedBodyIsHeldOnce holds the memory a render takes for a body
+// built to make the parser copy: a paragraph opened under a hundred nested
+// quotes and continued by lazy lines, which every one of the hundred levels
+// carries down to the paragraph at the bottom.
+//
+// A parser that copies those lines at every level allocates about 580 bytes for
+// each byte of this body, 23 MB for 40 KB of text. One that holds a level as a
+// range of the lines it already has allocates 36, the same with the race
+// detector on and off, and a body of ordinary prose of the same length takes
+// 54 to 58 through this package's rewrite. The bound sits above both and well
+// below the copy.
+//
+// It does not call t.Parallel: the memory profile it reads belongs to the whole
+// process, and a top-level test that stays sequential runs while every parallel
+// one is paused.
+func TestAHostileNestedBodyIsHeldOnce(t *testing.T) {
+	const bound = 100
+
+	m := renderer(t)
+	src := strings.Repeat("> ", 100) + "x\n" + strings.Repeat("y\n", 20000)
+	var doc markdown.Document
+	perByte := allocatedPerByte(func() { doc = m.Render(src) }, len(src))
+
+	if n := strings.Count(string(doc.HTML()), "<blockquote>"); n != 100 {
+		t.Fatalf("the body rendered %d nested quotes, want 100", n)
+	}
+	if doc.Words != 20001 {
+		t.Fatalf("the body rendered %d words, want the 20001 it holds", doc.Words)
+	}
+	if perByte > bound {
+		t.Fatalf("a render of %d bytes allocated %.0f bytes for each, want at most %d", len(src), perByte, bound)
+	}
+	t.Logf("a render of %d bytes allocated %.1f bytes for each", len(src), perByte)
+}
+
+// allocatedPerByte is what render allocates under this package, divided by
+// size, read from a memory profile that records every allocation.
+//
+// The profile is read rather than the heap's running total because of what
+// package regexp allocates under the race detector. A matcher keeps its
+// backtracking state, 32 KB of it, in a sync.Pool, and with the detector on the
+// pool drops a quarter of what is put back, so a render that matches short
+// lines many times allocates far more than a build without the detector ever
+// does. That is the detector's cost and not the renderer's; the allocations
+// made under regexp are left out, and what remains is the same with the
+// detector on and off.
+func allocatedPerByte(render func(), size int) float64 {
+	defer func(rate int) { runtime.MemProfileRate = rate }(runtime.MemProfileRate)
+	runtime.MemProfileRate = 1
+	before := renderAllocations()
+	render()
+	return float64(renderAllocations()-before) / float64(size)
+}
+
+// renderAllocations is the total the memory profile has recorded allocated
+// under a function of this package and outside package regexp. The parser's
+// allocations count: it runs under Render. The collection it runs first is what
+// publishes the allocations made since the last one.
+func renderAllocations() int64 {
+	runtime.GC()
+	var records []runtime.MemProfileRecord
+	n, ok := runtime.MemProfile(nil, true)
+	for !ok {
+		records = make([]runtime.MemProfileRecord, n+64)
+		n, ok = runtime.MemProfile(records, true)
+	}
+	var total int64
+	for _, r := range records[:n] {
+		inPackage, inRegexp := false, false
+		frames := runtime.CallersFrames(r.Stack())
+		for {
+			frame, more := frames.Next()
+			inPackage = inPackage || strings.HasPrefix(frame.Function, "github.com/hyz-is/arandu-markdown.")
+			inRegexp = inRegexp || strings.HasPrefix(frame.Function, "regexp.")
+			if !more {
+				break
+			}
+		}
+		if inPackage && !inRegexp {
+			total += r.AllocBytes
+		}
+	}
+	return total
 }
