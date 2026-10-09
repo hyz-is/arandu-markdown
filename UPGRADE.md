@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.2.1
+
+Nothing to change in an application: this release touches skills, not Go code.
+`aru skills:sync` now offers `markdown-package` to a project that requires this
+version.
+
 ## v0.2.0
 
 ### `Document.HTML` is a method

@@ -10,6 +10,19 @@ a release is corrected by another release and never by moving a tag.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-09
+
+### Added
+
+- The `arandu-ecosystem` skill: the shared architecture an application keeps
+  before it builds a second implementation of what an Arandu module owns.
+
+### Changed
+
+- The `markdown-package` skill carries `audience: app` under `metadata` in its
+  frontmatter, which is what `aru skills:sync` reads to copy it into an
+  application whose `go.mod` requires this package. No other skill is marked.
+
 ## [0.2.0] - 2026-09-28
 
 ### Changed
