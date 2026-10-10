@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.2.4
+
+Nothing to change in code that calls this package. The release raises its
+floors, so `go get github.com/hyz-is/arandu-markdown@v0.2.4` brings `framework`
+v0.56.0 and `hesape` v0.54.0 into an application that required less. One that
+built a session store from `config.Config.SessionTTL` follows the framework's
+upgrade guide for v0.56.0 first: the field is removed, and the lifetime is
+`SESSION_LIFETIME` in minutes, read by `bootstrap.LoadConfiguration`.
+
 ## v0.2.3
 
 Nothing to change in code that calls this package. The release raises its

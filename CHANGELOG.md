@@ -10,6 +10,14 @@ a release is corrected by another release and never by moving a tag.
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-10-09
+
+### Changed
+
+- Requires `framework` v0.56.0 and `hesape` v0.54.0, up from v0.55.1 and
+  v0.52.0, and `arandu.mod.toml` declares `framework = ">= 0.56"`. Nothing
+  here read `config.Config.SessionTTL`, which that framework release removes.
+
 ## [0.2.3] - 2026-10-09
 
 ### Changed
