@@ -48,7 +48,8 @@ request; a new origin belongs in the installer's configuration, not here.
 A link `href` kept on an http(s) address also carries `Config.LinkRel` as its
 `rel`, from a closed list of link types that describe the other site and load
 nothing: `(*Module).relAttr`. A same-site path, an anchor and `mailto:` never
-carry it.
+carry it. Under `Config.Images = ImagesNone`, `src` keeps nothing, so every
+image is written as its description.
 
 ## Heading ids
 
@@ -59,7 +60,7 @@ version while the major is 0.
 
 ## Configuration
 
-`Config` has five fields, validated by `New` and defaulted by `withDefaults`
+`Config` has six fields, validated by `New` and defaulted by `withDefaults`
 after validation, never before. A new field is a new thing every installer has
 to understand, and a switch that widens the allowlist is refused: a list each
 installer can widen is a list nobody can audit.

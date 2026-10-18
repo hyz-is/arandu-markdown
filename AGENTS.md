@@ -83,7 +83,7 @@ render.go   the allowlist and the rewrite
 | a Markdown parser of its own, or goldmark | `str.Markdown`, the collection's one renderer. A second parser is a second way to spell the same document |
 | a sanitizer library | `golang.org/x/net/html`'s tokenizer and a closed list written out in `render.go`. The list is what `str.Markdown` emits and nothing else, so it is short enough to read whole |
 | stripping a tag that is not on the list | showing it as the text it was. An author who pasted an iframe sees the tag in the preview instead of wondering where it went |
-| an option per element, per attribute, per scheme | five settings in `Config`. The allowlist is not configurable: a list each installer can widen is a list nobody can audit |
+| an option per element, per attribute, per scheme | six settings in `Config`. The allowlist is not configurable: a list each installer can widen is a list nobody can audit |
 | a route that renders a body | nothing. A body reaches a page through the controller that authorized its entry; a route here would render text for anybody |
 | a cache | the caller's. `Render` is a pure function of the source and the configuration |
 
@@ -99,7 +99,8 @@ A change that breaks one of them is not merged, whatever else it improves.
 2. **A destination is checked, not trusted.** Links keep http(s) with no
    userinfo, mailto with an address, same-site paths with no `..`, and in-page
    anchors; images keep same-site paths and the origins `Config.ImageOrigins`
-   names, which is the list the application's content security policy allows.
+   names, which is the list the application's content security policy allows,
+   and none at all under `Config.Images = ImagesNone`.
 3. **Nothing is silently lost.** A refused link keeps its words, a refused image
    its description, a refused tag its text.
 4. **`arandu.mod.toml` matches the code.** `tests/Unit/audit_test.go` compares

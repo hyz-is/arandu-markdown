@@ -468,8 +468,12 @@ func (m *Module) href(dest string) (string, bool) {
 }
 
 // src is an image address a page can load: a path on this site, or an
-// address on an origin Config.ImageOrigins names.
+// address on an origin Config.ImageOrigins names. Under ImagesNone there is
+// none.
 func (m *Module) src(dest string) (string, bool) {
+	if m.cfg.Images == ImagesNone {
+		return "", false
+	}
 	dest = strings.TrimSpace(dest)
 	if dest == "" || strings.ContainsAny(dest, "\\\t\n\r") {
 		return "", false

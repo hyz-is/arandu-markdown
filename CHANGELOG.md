@@ -18,6 +18,11 @@ a release is corrected by another release and never by moving a tag.
   `New` refuses any other. Same-site paths, in-page anchors and `mailto:`
   links never carry it. Empty, the default, writes the links exactly as
   before.
+- `Config.Images`, with `ImagesAllowedOrigins` (the default, and what the empty
+  value means) and `ImagesNone`. Under `ImagesNone` no `<img>` is ever
+  written, same-site paths included: each image is written as its
+  description, as text, as a refused image already was. `New` refuses any
+  other value, and `ImagesNone` together with `ImageOrigins`.
 
 ## [0.2.4] - 2026-10-09
 

@@ -18,6 +18,17 @@ site's own paths, `#` anchors and `mailto:` addresses never carry it. A link
 type outside `external`, `nofollow`, `noopener`, `noreferrer`, `sponsored` and
 `ugc` is refused by `New`.
 
+### Images can be turned off
+
+```go
+markdown.Config{Images: markdown.ImagesNone}
+```
+
+draws no image at all, same-site paths included: every image is written as its
+description, as text. `ImageOrigins` has to be empty with it, or `New` refuses
+the configuration. Leaving `Images` empty keeps `ImagesAllowedOrigins`, the
+behaviour every earlier release had.
+
 ## v0.2.4
 
 Nothing to change in code that calls this package. The release raises its

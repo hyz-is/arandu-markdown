@@ -242,6 +242,45 @@ func TestImagesLoadOnlyFromThisSiteAndTheNamedOrigins(t *testing.T) {
 	}
 }
 
+func TestImagesNoneDrawsNoImageAndKeepsEveryDescription(t *testing.T) {
+	t.Parallel()
+
+	m, err := markdown.New(markdown.Config{Images: markdown.ImagesNone})
+	if err != nil {
+		t.Fatalf("building the module: %v", err)
+	}
+	for _, src := range []string{
+		"Look: ![a cover](/media/cover.png) here.",
+		"![a cover](/media/cover.png \"The caption\")",
+		"![a cover](https://cdn.example.com/prod/cover.png)",
+		"![a cover](<https://elsewhere.example/cover.png>)",
+		"<img src=\"/media/cover.png\" alt=\"a cover\">",
+		"> - ![a cover](/media/cover.png)",
+	} {
+		doc := m.Render(src)
+		onlyAllowlisted(t, src, doc)
+		out := string(doc.HTML())
+		if strings.Contains(out, "<img") || strings.Contains(out, "<figure") {
+			t.Errorf("%q drew an image under ImagesNone: %s", src, out)
+		}
+		if !strings.Contains(out, "a cover") || !strings.Contains(doc.Text, "a cover") {
+			t.Errorf("%q lost its description: %s / %q", src, out, doc.Text)
+		}
+	}
+	if doc := m.Render("![](/media/cover.png)"); strings.Contains(string(doc.HTML()), "<img") {
+		t.Errorf("an image with no description was drawn: %s", doc.HTML())
+	}
+
+	allowed, err := markdown.New(markdown.Config{Images: markdown.ImagesAllowedOrigins, ImageOrigins: []string{"https://cdn.example.com"}})
+	if err != nil {
+		t.Fatalf("building the module: %v", err)
+	}
+	src := "Look: ![a cover](https://cdn.example.com/prod/cover.png) here."
+	if got, want := allowed.Render(src).HTML(), render(t, src).HTML(); got != want {
+		t.Errorf("ImagesAllowedOrigins differs from the empty mode:\n%s\n%s", got, want)
+	}
+}
+
 func TestAParagraphHoldingOnlyAnImageIsAFigure(t *testing.T) {
 	t.Parallel()
 
@@ -408,6 +447,9 @@ func TestNewRefusesAConfigurationThatCannotWork(t *testing.T) {
 		{LinkRel: "noopener stylesheet"},
 		{LinkRel: "NOFOLLOW"},
 		{LinkRel: `nofollow" onclick="x`},
+		{Images: "some"},
+		{Images: "NONE"},
+		{Images: markdown.ImagesNone, ImageOrigins: []string{"https://cdn.example.com"}},
 	} {
 		if _, err := markdown.New(cfg); err == nil {
 			t.Errorf("New(%+v) was accepted", cfg)

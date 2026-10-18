@@ -78,8 +78,13 @@ doc := markdownModule.Render(source)
   id is in `Reserved`.
 - **`New` returns an error at boot.** The message names the field: a heading
   level outside 1–6, a reserved id that is not an id, an image origin that
-  is not a bare `https://` origin, or a `LinkRel` link type outside
-  `external`, `nofollow`, `noopener`, `noreferrer`, `sponsored`, `ugc`.
+  is not a bare `https://` origin, a `LinkRel` link type outside
+  `external`, `nofollow`, `noopener`, `noreferrer`, `sponsored`, `ugc`, an
+  `Images` mode other than `ImagesAllowedOrigins` and `ImagesNone`, or
+  `ImagesNone` together with `ImageOrigins`.
 - **A crawler follows the links visitors post.** Set
   `LinkRel: "noopener nofollow ugc"`. It goes on every link to an `http(s)`
   address and on no same-site path, anchor or `mailto:`.
+- **Images in comments should not load at all.** Set
+  `Images: markdown.ImagesNone`. No `<img>` is written, a same-site path
+  included, and each image is shown as its description.

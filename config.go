@@ -72,7 +72,26 @@ type Config struct {
 	// there is no other site for the relation to describe, and a nofollow on
 	// the site's own pages would tell a crawler to skip them.
 	LinkRel string
+
+	// Images is what an image in a body becomes. Empty means
+	// ImagesAllowedOrigins.
+	Images ImageMode
 }
+
+// ImageMode is what an image in a body becomes.
+type ImageMode string
+
+const (
+	// ImagesAllowedOrigins draws an image whose address is a same-site path or
+	// on an origin Config.ImageOrigins names, and writes the description of
+	// any other as text. It is what the empty ImageMode means.
+	ImagesAllowedOrigins ImageMode = "allowed-origins"
+	// ImagesNone never draws an image: every one is written as its
+	// description, as text, wherever its address points. It is for a body
+	// nobody vetted, where a picture is a request the reader's browser makes
+	// to an address the author chose, same-site paths included.
+	ImagesNone ImageMode = "none"
+)
 
 // linkTypes are the link types Config.LinkRel may name. Each one describes the
 // relation to the site a link points at, and none of them changes what the
@@ -106,6 +125,15 @@ func (c Config) Validate() error {
 	}
 	if _, err := linkRel(c.LinkRel); err != nil {
 		return err
+	}
+	switch c.Images {
+	case "", ImagesAllowedOrigins:
+	case ImagesNone:
+		if len(c.ImageOrigins) > 0 {
+			return fmt.Errorf("markdown: Config.Images is %q and Config.ImageOrigins names %d origins: with no image drawn there is nothing for an origin to allow", ImagesNone, len(c.ImageOrigins))
+		}
+	default:
+		return fmt.Errorf("markdown: Config.Images is %q, and has to be %q, %q, or empty for %q", c.Images, ImagesAllowedOrigins, ImagesNone, ImagesAllowedOrigins)
 	}
 	return nil
 }
@@ -153,6 +181,9 @@ func (c Config) withDefaults() Config {
 	}
 	if c.WordsPerMinute == 0 {
 		c.WordsPerMinute = DefaultWordsPerMinute
+	}
+	if c.Images == "" {
+		c.Images = ImagesAllowedOrigins
 	}
 	c.LinkRel, _ = linkRel(c.LinkRel)
 	return c

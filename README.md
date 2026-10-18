@@ -57,8 +57,8 @@ And the registration, inside the `k.Register(...)` call already there:
 
 `New` returns an error rather than starting half-wired: a heading level out of
 range, a reserved id no heading could take, an image origin that is not a
-bare `https://` origin, or a `LinkRel` naming a link type outside its list is
-refused where it is written.
+bare `https://` origin, a `LinkRel` naming a link type outside its list, or an
+`Images` mode that is not one of the two is refused where it is written.
 
 Registering it adds no route, no table and no background loop. It serves no
 route on purpose: a body reaches a page through the controller that authorized
@@ -92,7 +92,7 @@ configuration, so the result may be cached by the source.
 | fenced and indented code | `pre` and `code class="language-…"` |
 | lists, task lists, quotes, tables | `ul`, `ol start`, `li`, disabled `input type="checkbox"`, `blockquote`, `table` with `align` |
 | links | `a href title` — http(s) with no userinfo, `mailto:` with an address, same-site paths, in-page anchors; `rel` from `Config.LinkRel` on an http(s) link |
-| images | `img src alt title loading="lazy" decoding="async"` — same-site paths and `Config.ImageOrigins` |
+| images | `img src alt title loading="lazy" decoding="async"` — same-site paths and `Config.ImageOrigins`; none at all under `Config.Images: markdown.ImagesNone` |
 | an image alone in its paragraph | `figure`, with the image's title as its `figcaption` |
 
 Everything else is shown as the text it was. A pasted `<iframe>` appears on the
@@ -109,6 +109,7 @@ of wondering where it went.
 | `ImageOrigins` | none | Bare `https://` origins an image may load from besides the site itself — the same list as the content security policy's `img-src` |
 | `WordsPerMinute` | `200` | The reading speed `Minutes` is measured at |
 | `LinkRel` | none | The `rel` every link to an `http(s)` address carries, out of `external`, `nofollow`, `noopener`, `noreferrer`, `sponsored` and `ugc` — `"noopener nofollow ugc"` for a body visitors wrote. Same-site paths, `#` anchors and `mailto:` never carry it: there is no other site for it to describe, and a `nofollow` on the site's own pages tells a crawler to skip them. Empty writes no `rel` |
+| `Images` | `ImagesAllowedOrigins` | `ImagesNone` draws no image at all: each one, same-site paths included, is written as its description, as text. For a body nobody vetted, where a picture is a request the reader's browser makes to an address the author chose. `New` refuses it together with `ImageOrigins`, which would then allow nothing |
 
 ## Cost
 
