@@ -10,6 +10,15 @@ a release is corrected by another release and never by moving a tag.
 
 ## [Unreleased]
 
+### Added
+
+- `Config.LinkRel`: the `rel` every link to an http(s) address carries, such as
+  `"noopener nofollow ugc"` for a body visitors wrote, from the link types
+  `external`, `nofollow`, `noopener`, `noreferrer`, `sponsored` and `ugc`.
+  `New` refuses any other. Same-site paths, in-page anchors and `mailto:`
+  links never carry it. Empty, the default, writes the links exactly as
+  before.
+
 ## [0.2.4] - 2026-10-09
 
 ### Changed

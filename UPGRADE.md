@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+Nothing to change in code that calls this package: every new setting is
+optional, and the zero value of each writes what the previous release wrote.
+
+### Links to other sites can carry a `rel`
+
+An application that renders bodies visitors wrote sets
+
+```go
+markdown.Config{LinkRel: "noopener nofollow ugc"}
+```
+
+and every link to an http(s) address comes out with that `rel`. Links to the
+site's own paths, `#` anchors and `mailto:` addresses never carry it. A link
+type outside `external`, `nofollow`, `noopener`, `noreferrer`, `sponsored` and
+`ugc` is refused by `New`.
+
 ## v0.2.4
 
 Nothing to change in code that calls this package. The release raises its

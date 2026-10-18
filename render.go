@@ -239,7 +239,7 @@ func (w *writer) start(t html.Token, raw string) {
 			w.stack = append(w.stack, &frame{name: name})
 			return
 		}
-		open = `<a href="` + html.EscapeString(href) + `"` + titleAttr(t) + `>`
+		open = `<a href="` + html.EscapeString(href) + `"` + titleAttr(t) + w.m.relAttr(href) + `>`
 	case "img":
 		w.image(t)
 		return
@@ -518,6 +518,20 @@ func has(t html.Token, key string) bool {
 		}
 	}
 	return false
+}
+
+// relAttr is the rel attribute of a link to href: Config.LinkRel on an
+// http(s) address, and nothing on a same-site path, an anchor or an e-mail.
+// href is one (*Module).href kept, so a scheme it starts with is one of those.
+func (m *Module) relAttr(href string) string {
+	if m.cfg.LinkRel == "" {
+		return ""
+	}
+	lower := strings.ToLower(href)
+	if !strings.HasPrefix(lower, "http:") && !strings.HasPrefix(lower, "https:") {
+		return ""
+	}
+	return ` rel="` + m.cfg.LinkRel + `"`
 }
 
 func titleAttr(t html.Token) string {

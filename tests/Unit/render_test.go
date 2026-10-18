@@ -40,7 +40,7 @@ var allowed = map[string]map[string]bool{
 	"h4": {"id": true}, "h5": {"id": true}, "h6": {"id": true},
 	"hr": {}, "li": {}, "strong": {}, "em": {}, "del": {}, "br": {},
 	"code":       {"class": true},
-	"a":          {"href": true, "title": true},
+	"a":          {"href": true, "title": true, "rel": true},
 	"img":        {"src": true, "alt": true, "title": true, "loading": true, "decoding": true},
 	"input":      {"type": true, "disabled": true, "checked": true},
 	"figure":     {},
@@ -153,6 +153,43 @@ func TestLinksKeepOnlyDestinationsABodyMayPointAt(t *testing.T) {
 		if !strings.Contains(string(doc.HTML()), "words") {
 			t.Errorf("%q: the link's words were lost: %s", c.dest, doc.HTML())
 		}
+	}
+}
+
+func TestLinkRelMarksEveryLinkToAnotherSiteAndNoOtherLink(t *testing.T) {
+	t.Parallel()
+
+	m, err := markdown.New(markdown.Config{LinkRel: " noopener  nofollow ugc nofollow "})
+	if err != nil {
+		t.Fatalf("building the module: %v", err)
+	}
+	for _, c := range []struct {
+		src  string
+		want string
+	}{
+		{"[a](https://example.com/x)", `<a href="https://example.com/x" rel="noopener nofollow ugc">a</a>`},
+		{"[a](HTTP://example.com \"Title\")", `<a href="HTTP://example.com" title="Title" rel="noopener nofollow ugc">a</a>`},
+		{"See <https://example.com/auto>.", `<a href="https://example.com/auto" rel="noopener nofollow ugc">`},
+		{"[a](/blog/first-post)", `<a href="/blog/first-post">a</a>`},
+		{"[a](#a-section)", `<a href="#a-section">a</a>`},
+		{"[a](mailto:someone@example.com)", `<a href="mailto:someone@example.com">a</a>`},
+	} {
+		doc := m.Render(c.src)
+		onlyAllowlisted(t, c.src, doc)
+		if !strings.Contains(string(doc.HTML()), c.want) {
+			t.Errorf("%q:\ngot  %s\nwant %s", c.src, doc.HTML(), c.want)
+		}
+	}
+	if doc := m.Render("[a](javascript:alert(1))"); strings.Contains(string(doc.HTML()), "rel=") {
+		t.Errorf("a refused link carried a rel: %s", doc.HTML())
+	}
+
+	plain := render(t, "[a](https://example.com/x)")
+	if strings.Contains(string(plain.HTML()), "rel=") {
+		t.Errorf("a configuration without LinkRel wrote a rel: %s", plain.HTML())
+	}
+	if !strings.Contains(string(plain.HTML()), `<a href="https://example.com/x">a</a>`) {
+		t.Errorf("a configuration without LinkRel changed the link: %s", plain.HTML())
 	}
 }
 
@@ -368,6 +405,9 @@ func TestNewRefusesAConfigurationThatCannotWork(t *testing.T) {
 		{ImageOrigins: []string{"https://user@cdn.example.com"}},
 		{ImageOrigins: []string{"cdn.example.com"}},
 		{ImageOrigins: []string{"https://cdn.example.com?x"}},
+		{LinkRel: "noopener stylesheet"},
+		{LinkRel: "NOFOLLOW"},
+		{LinkRel: `nofollow" onclick="x`},
 	} {
 		if _, err := markdown.New(cfg); err == nil {
 			t.Errorf("New(%+v) was accepted", cfg)

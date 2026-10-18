@@ -1,6 +1,6 @@
 ---
 name: markdown-module
-description: Change what this Arandu package's renderer writes. Use when the request is to "allow an element", "keep an attribute", "support iframes", "allow images from another host", "add a class to code blocks", "change heading ids", "list h4 in the table of contents", "add a config option", "make it configurable", "the renderer drops my tag", "a link disappeared", or when a change touches render.go, config.go or module.go. Covers the allowlist and why it only follows str.Markdown, destinations, heading ids, the four settings, and why there is no route.
+description: Change what this Arandu package's renderer writes. Use when the request is to "allow an element", "keep an attribute", "support iframes", "allow images from another host", "add a class to code blocks", "change heading ids", "list h4 in the table of contents", "add a config option", "make it configurable", "the renderer drops my tag", "a link disappeared", or when a change touches render.go, config.go or module.go. Covers the allowlist and why it only follows str.Markdown, destinations, heading ids, the settings, and why there is no route.
 license: MIT
 ---
 
@@ -45,6 +45,11 @@ ids headings get. `(*Module).src` keeps same-site paths and https URLs on an
 origin `Config.ImageOrigins` names. A new scheme needs the argument in the pull
 request; a new origin belongs in the installer's configuration, not here.
 
+A link `href` kept on an http(s) address also carries `Config.LinkRel` as its
+`rel`, from a closed list of link types that describe the other site and load
+nothing: `(*Module).relAttr`. A same-site path, an anchor and `mailto:` never
+carry it.
+
 ## Heading ids
 
 `str.Slug(text, "-")`, cut at a word past 80 characters, `section` when nothing
@@ -54,7 +59,7 @@ version while the major is 0.
 
 ## Configuration
 
-`Config` has four fields, validated by `New` and defaulted by `withDefaults`
+`Config` has five fields, validated by `New` and defaulted by `withDefaults`
 after validation, never before. A new field is a new thing every installer has
 to understand, and a switch that widens the allowlist is refused: a list each
 installer can widen is a list nobody can audit.

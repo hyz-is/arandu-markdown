@@ -83,7 +83,7 @@ render.go   the allowlist and the rewrite
 | a Markdown parser of its own, or goldmark | `str.Markdown`, the collection's one renderer. A second parser is a second way to spell the same document |
 | a sanitizer library | `golang.org/x/net/html`'s tokenizer and a closed list written out in `render.go`. The list is what `str.Markdown` emits and nothing else, so it is short enough to read whole |
 | stripping a tag that is not on the list | showing it as the text it was. An author who pasted an iframe sees the tag in the preview instead of wondering where it went |
-| an option per element, per attribute, per scheme | four settings in `Config`. The allowlist is not configurable: a list each installer can widen is a list nobody can audit |
+| an option per element, per attribute, per scheme | five settings in `Config`. The allowlist is not configurable: a list each installer can widen is a list nobody can audit |
 | a route that renders a body | nothing. A body reaches a page through the controller that authorized its entry; a route here would render text for anybody |
 | a cache | the caller's. `Render` is a pure function of the source and the configuration |
 

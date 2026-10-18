@@ -1,6 +1,6 @@
 ---
 name: markdown-package
-description: Install, wire and use the Arandu Markdown package (Go, Arandu) in an application. Use when the request is to "install arandu-markdown", "render Markdown", "render a blog post", "sanitize Markdown", "table of contents from headings", "reading time", "plain text for llms.txt", "go get github.com/hyz-is/arandu-markdown", "wire it into bootstrap/app.go", "images from the CDN do not show in posts", "my iframe shows as text", "a heading id changed to -2", or when a project's go.mod already requires github.com/hyz-is/arandu-markdown. Covers the wiring and where it goes, the four Config fields, the content security policy's img-src, caching, and what each Document field is for.
+description: Install, wire and use the Arandu Markdown package (Go, Arandu) in an application. Use when the request is to "install arandu-markdown", "render Markdown", "render a blog post", "sanitize Markdown", "table of contents from headings", "reading time", "plain text for llms.txt", "go get github.com/hyz-is/arandu-markdown", "wire it into bootstrap/app.go", "images from the CDN do not show in posts", "my iframe shows as text", "a heading id changed to -2", or when a project's go.mod already requires github.com/hyz-is/arandu-markdown. Covers the wiring and where it goes, the Config fields, the rel links carry, the content security policy's img-src, caching, and what each Document field is for.
 license: MIT
 metadata:
   audience: app
@@ -77,5 +77,9 @@ doc := markdownModule.Render(source)
 - **A heading's id ends in `-2`.** Another heading has the same words, or the
   id is in `Reserved`.
 - **`New` returns an error at boot.** The message names the field: a heading
-  level outside 1–6, a reserved id that is not an id, or an image origin that
-  is not a bare `https://` origin.
+  level outside 1–6, a reserved id that is not an id, an image origin that
+  is not a bare `https://` origin, or a `LinkRel` link type outside
+  `external`, `nofollow`, `noopener`, `noreferrer`, `sponsored`, `ugc`.
+- **A crawler follows the links visitors post.** Set
+  `LinkRel: "noopener nofollow ugc"`. It goes on every link to an `http(s)`
+  address and on no same-site path, anchor or `mailto:`.

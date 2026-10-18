@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -59,7 +60,24 @@ type Config struct {
 	// WordsPerMinute is the reading speed Document.Minutes is measured at.
 	// Zero means DefaultWordsPerMinute.
 	WordsPerMinute int
+
+	// LinkRel is the rel attribute every link to an http or https address
+	// carries: space-separated link types out of external, nofollow, noopener,
+	// noreferrer, sponsored and ugc, such as "noopener nofollow ugc" for a body
+	// visitors wrote. Each is written once, in the order given. Empty writes no
+	// rel at all, which is the output a configuration without it always had.
+	//
+	// A same-site path, an in-page anchor and a mailto: address never carry
+	// it: each leads to a page the site serves itself or to no page at all, so
+	// there is no other site for the relation to describe, and a nofollow on
+	// the site's own pages would tell a crawler to skip them.
+	LinkRel string
 }
+
+// linkTypes are the link types Config.LinkRel may name. Each one describes the
+// relation to the site a link points at, and none of them changes what the
+// page loads or runs.
+var linkTypes = []string{"external", "nofollow", "noopener", "noreferrer", "sponsored", "ugc"}
 
 // idPattern is what a reserved id has to look like to be one a heading could
 // otherwise have taken: the characters a slug is made of.
@@ -86,7 +104,27 @@ func (c Config) Validate() error {
 			return err
 		}
 	}
+	if _, err := linkRel(c.LinkRel); err != nil {
+		return err
+	}
 	return nil
+}
+
+// linkRel is Config.LinkRel as it is written: each link type once, in the
+// order given, separated by one space.
+func linkRel(rel string) (string, error) {
+	var kept []string
+	seen := map[string]bool{}
+	for _, kind := range strings.Fields(rel) {
+		if !slices.Contains(linkTypes, kind) {
+			return "", fmt.Errorf("markdown: Config.LinkRel holds %q, which is not one of the link types %s", kind, strings.Join(linkTypes, ", "))
+		}
+		if !seen[kind] {
+			seen[kind] = true
+			kept = append(kept, kind)
+		}
+	}
+	return strings.Join(kept, " "), nil
 }
 
 // bareOrigin is an https origin with nothing after it, lowercased.
@@ -116,5 +154,6 @@ func (c Config) withDefaults() Config {
 	if c.WordsPerMinute == 0 {
 		c.WordsPerMinute = DefaultWordsPerMinute
 	}
+	c.LinkRel, _ = linkRel(c.LinkRel)
 	return c
 }

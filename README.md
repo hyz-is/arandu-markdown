@@ -56,8 +56,9 @@ And the registration, inside the `k.Register(...)` call already there:
 ```
 
 `New` returns an error rather than starting half-wired: a heading level out of
-range, a reserved id no heading could take, or an image origin that is not a
-bare `https://` origin is refused where it is written.
+range, a reserved id no heading could take, an image origin that is not a
+bare `https://` origin, or a `LinkRel` naming a link type outside its list is
+refused where it is written.
 
 Registering it adds no route, no table and no background loop. It serves no
 route on purpose: a body reaches a page through the controller that authorized
@@ -90,7 +91,7 @@ configuration, so the result may be cached by the source.
 | `**strong**`, `*em*`, `~~del~~`, `` `code` `` | `strong`, `em`, `del`, `code` |
 | fenced and indented code | `pre` and `code class="language-…"` |
 | lists, task lists, quotes, tables | `ul`, `ol start`, `li`, disabled `input type="checkbox"`, `blockquote`, `table` with `align` |
-| links | `a href title` — http(s) with no userinfo, `mailto:` with an address, same-site paths, in-page anchors |
+| links | `a href title` — http(s) with no userinfo, `mailto:` with an address, same-site paths, in-page anchors; `rel` from `Config.LinkRel` on an http(s) link |
 | images | `img src alt title loading="lazy" decoding="async"` — same-site paths and `Config.ImageOrigins` |
 | an image alone in its paragraph | `figure`, with the image's title as its `figcaption` |
 
@@ -107,6 +108,7 @@ of wondering where it went.
 | `Reserved` | none | Ids the page already uses. A heading that would take one gets `-2` |
 | `ImageOrigins` | none | Bare `https://` origins an image may load from besides the site itself — the same list as the content security policy's `img-src` |
 | `WordsPerMinute` | `200` | The reading speed `Minutes` is measured at |
+| `LinkRel` | none | The `rel` every link to an `http(s)` address carries, out of `external`, `nofollow`, `noopener`, `noreferrer`, `sponsored` and `ugc` — `"noopener nofollow ugc"` for a body visitors wrote. Same-site paths, `#` anchors and `mailto:` never carry it: there is no other site for it to describe, and a `nofollow` on the site's own pages tells a crawler to skip them. Empty writes no `rel` |
 
 ## Cost
 
