@@ -1,6 +1,6 @@
 # Upgrade Guide
 
-## Unreleased
+## v0.3.0
 
 Nothing to change in code that calls this package: every new setting is
 optional, and the zero value of each writes what the previous release wrote.
