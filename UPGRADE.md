@@ -1,5 +1,25 @@
 # Upgrade Guide
 
+## Unreleased
+
+Go 1.26.10 is the floor: `go.mod` declares `go 1.26.10`, because every
+vulnerability an Arandu application reaches is in the standard library and is
+fixed there (crypto/x509, net/http HTTP/2 and CONNECT, html/template,
+net/textproto, crypto/tls). A build on an older toolchain fetches 1.26.10 or
+fails when `GOTOOLCHAIN=local`.
+
+This release selects Framework v0.66.0 and Hesape v0.85.0; read their upgrade
+guides from the versions the application required before (Framework v0.56.0
+and Hesape v0.54.0 in v0.3.0). Rendering, the configuration and the sanitizer
+are untouched.
+
+`apidiff` reports `(*Module).Routes` as changed. Its signature reads as before;
+what moved is underneath the name it takes: Framework v0.63.0 declares
+`fhttp.Router` as an alias of hesape's `controllers.Router`, where v0.56.0
+declared a struct of its own. An application on Framework v0.66.0 passes the
+router it already builds and changes nothing; one that stays on an older
+Framework cannot take this release.
+
 ## v0.3.0
 
 Nothing to change in code that calls this package: every new setting is
